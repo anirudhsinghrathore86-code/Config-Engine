@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Config-Engine \u2014 AI Game QA Platform</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg-deep: #080a0d;
+    --bg-panel: #0d1117;
+    --bg-surface: #131920;
+    --bg-raised: #1a2230;
+    --border: #1e2d3d;
+    --border-glow: #00f2ff30;
+    --cyan: #00f2ff;
+    --cyan-dim: #00f2ff80;
+    --cyan-faint: #00f2ff15;
+    --orange: #ff6b35;
+    --orange-dim: #ff6b3560;
+    --green: #39ff14;
+    --green-dim: #39ff1460;
+    --red: #ff2d55;
+    --red-dim: #ff2d5560;
+    --yellow: #ffd60a;
+    --text-primary: #e2eaf3;
+    --text-secondary: #7a93aa;
+    --text-muted: #3d5168;
+    --font-mono: 'Space Mono', monospace;
+    --font-ui: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* \u2500\u2500\u2500 SCANLINE OVERLAY \u2500\u2500\u2500 */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* \u2500\u2500\u2500 SIDEBAR \u2500\u2500\u2500 */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0; right: -1px; bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--cyan-dim) 30%, var(--cyan-dim) 70%, transparent);
+    opacity: 0.5;
+  }
+
+  .logo-area {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 30px;
+    height: 30px;
+    position: relative;
+  }
+
+  .logo-icon svg { width: 100%; height: 100%; }
+
+  .logo-text {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 12px var(--cyan-dim);
+  }
+
+  .logo-text span {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .logo-version {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    letter-spacing: 0.1em;
+  }
+
+  .nav-section {
+    padding: 16px 12px;
+    flex: 1;
+  }
+
+  .nav-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+    position: relative;
+  }
+
+  .nav-item:hover { background: var(--bg-surface); color: var(--text-primary); }
+
+  .nav-item.active {
+    background: var(--cyan-faint);
+    color: var(--cyan);
+    border: 1px solid var(--border-glow);
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 2px; height: 60%;
+    background: var(--cyan);
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    padding: 2px 5px;
+    border-radius: 10px;
+    line-height: 1;
+  }
+
+  .nav-section + .nav-section { padding-top: 4px; }
+
+  .sidebar-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .bot-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse-green 2s infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green); }
+    50% { opacity: 0.5; box-shadow: 0 0 12px var(--green); }
+  }
+
+  /* \u2500\u2500\u2500 MAIN AREA \u2500\u2500\u2500 */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-deep);
+  }
+
+  /* \u2500\u2500\u2500 TOPBAR \u2500\u2500\u2500 */
+  .topbar {
+    height: 56px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    gap: 16px;
+    position: relative;
+  }
+
+  .project-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .project-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .project-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .project-name svg { color: var(--text-muted); }
+
+  .topbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  .run-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .test-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .test-stat-val { color: var(--cyan); }
+
+  .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  .btn-ghost {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text-primary); background: var(--bg-surface); }
+
+  .btn-primary {
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--cyan);
+    background: var(--cyan-faint);
+    color: var(--cyan);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 0 8px var(--cyan-dim);
+    box-shadow: 0 0 12px var(--cyan-faint), inset 0 0 12px var(--cyan-faint);
+    letter-spacing: 0.03em;
+  }
+
+  .btn-primary:hover {
+    background: rgba(0,242,255,0.2);
+    box-shadow: 0 0 20px var(--cyan-dim), inset 0 0 20px rgba(0,242,255,0.1);
+  }
+
+  .btn-primary.running {
+    color: var(--orange);
+    border-color: var(--orange);
+    background: rgba(255,107,53,0.1);
+    box-shadow: 0 0 12px var(--orange-dim), inset 0 0 12px rgba(255,107,53,0.05);
+    text-shadow: 0 0 8px var(--orange-dim);
+    cursor: not-allowed;
+  }
+
+  .btn-primary .spinner {
+    display: none;
+    width: 12px; height: 12px;
+    border: 1.5px solid transparent;
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  .btn-primary.running .spinner { display: block; }
+  .btn-primary.running .btn-icon { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* \u2500\u2500\u2500 CONTENT \u2500\u2500\u2500 */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 320px;
+    grid-template-rows: auto auto 1fr;
+    gap: 16px;
+    align-content: start;
+  }
+
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* \u2500\u2500\u2500 PANEL BASE \u2500\u2500\u2500 */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,242,255,0.02) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .panel-title-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 5px var(--cyan);
+  }
+
+  .panel-title-dot.orange { background: var(--orange); box-shadow: 0 0 5px var(--orange); }
+  .panel-title-dot.green { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .panel-title-dot.red { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+  .panel-meta {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* \u2500\u2500\u2500 HEATMAP \u2500\u2500\u2500 */
+  .heatmap-panel {
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+
+  .heatmap-container {
+    padding: 14px;
+    height: 280px;
+    position: relative;
+  }
+
+  .heatmap-area {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 75%, rgba(0,30,20,0.8) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 75% 30%, rgba(0,20,40,0.8) 0%, transparent 60%),
+      linear-gradient(160deg, #0a1a10 0%, #091520 40%, #0e1020 100%);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  /* level geometry */
+  .level-floor {
+    position: absolute;
+    background: rgba(20, 40, 55, 0.6);
+    border: 1px solid rgba(0,242,255,0.08);
+    border-radius: 2px;
+  }
+
+  .level-wall {
+    position: absolute;
+    background: rgba(10, 25, 35, 0.9);
+    border: 1px solid rgba(0,242,255,0.12);
+  }
+
+  /* grid overlay */
+  .heatmap-area::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,242,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,242,255,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+
+  .hotspot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hotspot-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
+
+  .hotspot-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
+
+  .hotspot.red .hotspot-core { background: radial-gradient(circle, rgba(255,45,85,0.95) 0%, rgba(255,45,85,0.4) 60%, transparent 100%); }
+  .hotspot.red .hotspot-ring { border: 1.5px solid rgba(255,45,85,0.5); animation: ring-pulse-red 2s ease-out infinite; }
+
+  .hotspot.orange .hotspot-core { background: radial-gradient(circle, rgba(255,107,53,0.9) 0%, rgba(255,107,53,0.3) 60%, transparent 100%); }
+  .hotspot.orange .hotspot-ring { border: 1.5px solid rgba(255,107,53,0.5); animation: ring-pulse-orange 2.5s ease-out infinite; }
+
+  .hotspot.yellow .hotspot-core { background: radial-gradient(circle, rgba(255,214,10,0.85) 0%, rgba(255,214,10,0.2) 60%, transparent 100%); }
+  .hotspot.yellow .hotspot-ring { border: 1.5px solid rgba(255,214,10,0.4); animation: ring-pulse-yellow 3s ease-out infinite; }
+
+  @keyframes ring-pulse-red {
+    0% { width: 20px; height: 20px; opacity: 1; }
+    100% { width: 70px; height: 70px; opacity: 0; }
+  }
+  @keyframes ring-pulse-orange {
+    0% { width: 18px; height: 18px; opacity: 1; }
+    100% { width: 60px; height: 60px; opacity: 0; }
+  }
+  @keyframes ring-pulse-yellow {
+    0% { width: 16px; height: 16px; opacity: 1; }
+    100% { width: 50px; height: 50px; opacity: 0; }
+  }
+
+  .hotspot-label {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  }
+
+  .bot-marker {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--cyan-dim);
+    animation: bot-move 4s ease-in-out infinite;
+    transform: translate(-50%, -50%);
+  }
+
+  .bot-marker::after {
+    content: 'BOT_01';
+    position: absolute;
+    top: -16px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 7px;
+    color: var(--cyan);
+    white-space: nowrap;
+    text-shadow: 0 0 6px var(--cyan);
+  }
+
+  @keyframes bot-move {
+    0%   { top: 60%; left: 25%; }
+    25%  { top: 40%; left: 45%; }
+    50%  { top: 55%; left: 65%; }
+    75%  { top: 30%; left: 50%; }
+    100% { top: 60%; left: 25%; }
+  }
+
+  .heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .legend-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* \u2500\u2500\u2500 METRICS PANEL \u2500\u2500\u2500 */
+  .metrics-panel {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .metrics-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  .metric-item {}
+
+  .metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .metric-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .metric-value {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .metric-value.cyan { color: var(--cyan); }
+  .metric-value.orange { color: var(--orange); }
+  .metric-value.red { color: var(--red); }
+  .metric-value.green { color: var(--green); }
+
+  .metric-bar-track {
+    height: 4px;
+    background: var(--bg-raised);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    position: relative;
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .metric-bar-fill.cyan {
+    background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+    box-shadow: 0 0 6px var(--cyan-dim);
+  }
+
+  .metric-bar-fill.orange {
+    background: linear-gradient(90deg, var(--orange-dim), var(--orange));
+    box-shadow: 0 0 6px var(--orange-dim);
+  }
+
+  .metric-bar-fill.red {
+    background: linear-gradient(90deg, var(--red-dim), var(--red));
+    box-shadow: 0 0 6px var(--red-dim);
+    animation: bar-warning 1.5s ease-in-out infinite;
+  }
+
+  .metric-bar-fill.green {
+    background: linear-gradient(90deg, var(--green-dim), var(--green));
+    box-shadow: 0 0 6px var(--green-dim);
+  }
+
+  @keyframes bar-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+  }
+
+  .metric-sub {
+    margin-top: 4px;
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .metric-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  .fps-display {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .fps-big {
+    font-family: var(--font-mono);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-dim);
+    line-height: 1;
+    transition: color 0.5s;
+  }
+
+  .fps-unit {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .fps-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* \u2500\u2500\u2500 INSIGHTS \u2500\u2500\u2500 */
+  .insights-panel {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .insights-body {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .insight-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 14px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+    cursor: default;
+  }
+
+  .insight-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-glow);
+  }
+
+  .insight-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .insight-card.warn::before { background: linear-gradient(90deg, var(--orange), transparent); }
+  .insight-card.critical::before { background: linear-gradient(90deg, var(--red), transparent); }
+  .insight-card.info::before { background: linear-gradient(90deg, var(--cyan), transparent); }
+
+  .insight-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .insight-badge.warn { background: rgba(255,107,53,0.12); color: var(--orange); border: 1px solid rgba(255,107,53,0.2); }
+  .insight-badge.critical { background: rgba(255,45,85,0.12); color: var(--red); border: 1px solid rgba(255,45,85,0.2); }
+  .insight-badge.info { background: var(--cyan-faint); color: var(--cyan); border: 1px solid var(--border-glow); }
+
+  .insight-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+
+  .insight-body {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .insight-body code {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--cyan);
+    background: var(--cyan-faint);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  .insight-footer {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .insight-conf {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  .insight-conf span { color: var(--green); }
+
+  .insight-action {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--cyan);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: text-shadow 0.2s;
+  }
+
+  .insight-action:hover { text-shadow: 0 0 8px var(--cyan); }
+
+  /* \u2500\u2500\u2500 BOT LOGS \u2500\u2500\u2500 */
+  .logs-panel {
+    grid-column: 3;
+    grid-row: 2 / 4;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.7;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 380px;
+  }
+
+  .log-body::-webkit-scrollbar { width: 3px; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .log-entry {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    animation: log-appear 0.3s forwards;
+  }
+
+  @keyframes log-appear {
+    from { opacity: 0; transform: translateX(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .log-time { color: var(--text-muted); flex-shrink: 0; }
+  .log-bot { color: var(--cyan); flex-shrink: 0; }
+  .log-msg { color: var(--text-secondary); }
+  .log-msg.event { color: var(--orange); }
+  .log-msg.error { color: var(--red); }
+  .log-msg.success { color: var(--green); }
+
+  .log-cursor {
+    display: inline-block;
+    width: 6px; height: 10px;
+    background: var(--cyan);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* \u2500\u2500\u2500 DEVICE FARM \u2500\u2500\u2500 */
+  .farm-panel {
+    grid-column: 1 / 3;
+    grid-row: 3;
+  }
+
+  .farm-body {
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .device-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s;
+  }
+
+  .device-card:hover { border-color: rgba(0,242,255,0.2); }
+
+  .device-card.active { border-color: rgba(57,255,20,0.3); }
+
+  .device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .device-name {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .device-status {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+
+  .device-status.running { background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse-green 2s infinite; }
+  .device-status.queued { background: var(--yellow); box-shadow: 0 0 5px var(--yellow); }
+  .device-status.error { background: var(--red); box-shadow: 0 0 5px var(--red); }
+  .device-status.idle { background: var(--text-muted); }
+
+  .device-spec {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .device-spec b { color: var(--text-secondary); font-weight: 400; }
+
+  .device-progress {
+    height: 2px;
+    background: var(--bg-raised);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .device-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    box-shadow: 0 0 4px var(--green);
+    transition: width 2s linear;
+  }
+
+  /* \u2500\u2500\u2500 LOADING OVERLAY \u2500\u2500\u2500 */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,10,13,0.85);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .loading-ring {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-right-color: var(--cyan-dim);
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 20px var(--cyan-faint);
+  }
+
+  .loading-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 280px;
+  }
+
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.3s, color 0.3s;
+  }
+
+  .loading-step.active { opacity: 1; color: var(--text-secondary); }
+  .loading-step.done { opacity: 1; color: var(--green); }
+
+  .loading-step-icon {
+    width: 14px; height: 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* \u2500\u2500\u2500 ANIMATIONS \u2500\u2500\u2500 */
+  .fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px var(--cyan-dim);
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-ring"></div>
+  <div class="loading-text" id="loadingText">INITIALIZING TEST RUN...</div>
+  <div class="loading-steps" id="loadingSteps">
+    <div class="loading-step" id="step1">
+      <div class="loading-step-icon">\u25c7</div>
+      <span>Spinning up virtual device farm (248 instances)...</span>
+    </div>
+    <div class="loading-step" id="step2">
+      <div class="loading-step-icon">\u25c7</div>
+      <span>Deploying Project Velocity build v2.4.1...</span>
+    </div>
+    <div class="loading-step" id="step3">
+      <div class="loading-step-icon">\u25c7</div>
+      <span>Calibrating AI navigation heuristics...</span>
+    </div>
+    <div class="loading-step" id="step4">
+      <div class="loading-step-icon">\u25c7</div>
+      <span>Injecting telemetry hooks into runtime...</span>
+    </div>
+    <div class="loading-step" id="step5">
+      <div class="loading-step-icon">\u25c7</div>
+      <span>Launching Bot_01 through Bot_24...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg viewBox="0 0 30 30" fill="none">
+          <rect x="2" y="2" width="11" height="11" rx="2" fill="none" stroke="#00f2ff" stroke-width="1.5"/>
+          <rect x="17" y="2" width="11" height="11" rx="2" fill="#00f2ff" opacity="0.15" stroke="#00f2ff" stroke-width="1.5"/>
+          <rect x="2" y="17" width="11" height="11" rx="2" fill="#00f2ff" opacity="0.08" stroke="#00f2ff" stroke-width="1.5" stroke-dasharray="2 2"/>
+          <rect x="17" y="17" width="11" height="11" rx="2" fill="none" stroke="#00f2ff" stroke-width="1.5" opacity="0.4"/>
+          <circle cx="22.5" cy="22.5" r="2" fill="#00f2ff"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">Config<span>-Engine</span></div>
+        <div class="logo-version">v2.4.1 \u00b7 ENTERPRISE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Platform</div>
+
+    <div class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="6" height="6" rx="1"/>
+        <rect x="9" y="1" width="6" height="6" rx="1"/>
+        <rect x="1" y="9" width="6" height="6" rx="1"/>
+        <rect x="9" y="9" width="6" height="6" rx="1"/>
+      </svg>
+      Dashboard
+    </div>
+
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="3" width="14" height="10" rx="1.5"/>
+        <path d="M5 7h6M5 9.5h4"/>
+      </svg>
+      Device Farm
+      <span class="nav-badge">248</span>
+    </div>
+
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="5"/>
+        <path d="M8 5v3l2 1.5"/>
+        <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+      AI Bot Logic
+    </div>
+
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="6"/>
+        <circle cx="8" cy="8" r="2.5"/>
+        <path d="M8 2v1M8 13v1M2 8h1M13 8h1"/>
+      </svg>
+      SDK Settings
+    </div>
+  </div>
+
+  <div class="nav-section" style="flex:0">
+    <div class="nav-label">Reports</div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 2h7l3 3v9H3z"/>
+        <path d="M10 2v3h3M6 7h4M6 10h4M6 13h2"/>
+      </svg>
+      Test History
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 12 L5 8 L8 10 L11 5 L14 7"/>
+        <path d="M2 14h12"/>
+      </svg>
+      Analytics
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="bot-status">
+      <div class="status-dot"></div>
+      <span>24 Bots Active \u00b7 Run #847</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="project-selector">
+      <span class="project-tag">Project</span>
+      <span class="project-name">
+        Project Velocity
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 4l2.5 2.5L7.5 4"/></svg>
+      </span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="run-info">
+      <div class="test-stat">BUILD <span class="test-stat-val">v2.4.1-alpha</span></div>
+      <div class="test-stat">CONFIGS <span class="test-stat-val">248</span></div>
+      <div class="test-stat">ELAPSED <span class="test-stat-val" id="elapsed">04:47</span></div>
+      <div class="test-stat">BUGS <span class="test-stat-val" id="bugCount" style="color:var(--red)">7</span></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-ghost">Export Report</button>
+      <button class="btn-primary" id="runBtn" onclick="runTest()">
+        <svg class="btn-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3,2 10,6 3,10"/></svg>
+        <div class="spinner"></div>
+        Run New Test
+      </button>
+    </div>
+  </div>
+
+  <!-- Content Grid -->
+  <div class="content">
+
+    <!-- Heatmap Panel -->
+    <div class="panel heatmap-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot red"></div>
+          Level Heatmap \u00b7 Central Plaza
+        </div>
+        <div class="panel-meta">RUN #847 \u00b7 SECTOR 3-9</div>
+      </div>
+      <div class="heatmap-container">
+        <div class="heatmap-area" id="heatmap">
+
+          <!-- Level geometry -->
+          <div class="level-floor" style="left:8%;top:10%;width:84%;height:75%;"></div>
+          <div class="level-wall" style="left:0;top:0;width:8%;height:100%;"></div>
+          <div class="level-wall" style="right:0;top:0;width:8%;height:100%;"></div>
+          <div class="level-wall" style="left:8%;top:0;width:84%;height:10%;"></div>
+          <div class="level-wall" style="left:8%;bottom:0;width:84%;height:15%;"></div>
+          <!-- Interior structures -->
+          <div class="level-floor" style="left:20%;top:20%;width:18%;height:20%;background:rgba(15,35,50,0.7);border-color:rgba(0,242,255,0.15)"></div>
+          <div class="level-floor" style="left:60%;top:15%;width:24%;height:26%;background:rgba(15,35,50,0.7);border-color:rgba(0,242,255,0.15)"></div>
+          <div class="level-floor" style="left:35%;top:55%;width:30%;height:22%;background:rgba(15,35,50,0.7);border-color:rgba(0,242,255,0.15)"></div>
+
+          <!-- Hotspots -->
+          <div class="hotspot red" style="left:28%;top:28%;">
+            <div class="hotspot-core" style="width:22px;height:22px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">CRASH \u00b7 x:142,y:0</div>
+          </div>
+
+          <div class="hotspot red" style="left:67%;top:22%;">
+            <div class="hotspot-core" style="width:18px;height:18px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">LOW FPS \u00b7 14fps</div>
+          </div>
+
+          <div class="hotspot orange" style="left:50%;top:62%;">
+            <div class="hotspot-core" style="width:24px;height:24px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">DRAWCALL SPIKE</div>
+          </div>
+
+          <div class="hotspot orange" style="left:80%;top:55%;">
+            <div class="hotspot-core" style="width:16px;height:16px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">MEMORY PEAK</div>
+          </div>
+
+          <div class="hotspot yellow" style="left:15%;top:65%;">
+            <div class="hotspot-core" style="width:14px;height:14px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">PERF WARN</div>
+          </div>
+
+          <div class="hotspot yellow" style="left:42%;top:35%;">
+            <div class="hotspot-core" style="width:12px;height:12px;"></div>
+            <div class="hotspot-ring"></div>
+            <div class="hotspot-label">STUTTER</div>
+          </div>
+
+          <!-- Bot marker -->
+          <div class="bot-marker"></div>
+
+        </div>
+      </div>
+      <div class="heatmap-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Crash / Hard Stop</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> Perf Critical (&lt;20fps)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Perf Warning (&lt;40fps)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div> Bot Position</div>
+        <div style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">7 events \u00b7 248 configs</div>
+      </div>
+    </div>
+
+    <!-- Hardware Metrics -->
+    <div class="panel metrics-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot cyan"></div>
+          Hardware Metrics
+        </div>
+        <div class="panel-meta" id="liveTag">\u25cf LIVE</div>
+      </div>
+      <div class="metrics-body">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <div>
+            <div class="fps-label">Avg FPS</div>
+            <div class="fps-display">
+              <div class="fps-big" id="fpsVal">47</div>
+              <div class="fps-unit">fps</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="fps-label" style="margin-bottom:4px">Frame Budget</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--yellow)">21.3ms / 16.7ms</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--red);margin-top:2px">\u25b2 Over budget</div>
+          </div>
+        </div>
+
+        <div class="metric-divider"></div>
+
+        <div class="metric-item">
+          <div class="metric-header">
+            <span class="metric-name">GPU \u00b7 RTX 3060 Ti</span>
+            <span class="metric-value cyan" id="gpuVal">78%</span>
+          </div>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill cyan" id="gpuBar" style="width:78%"></div>
+          </div>
+          <div class="metric-sub">6,284 MHz \u00b7 8GB GDDR6 \u00b7 67\u00b0C</div>
+        </div>
+
+        <div class="metric-item">
+          <div class="metric-header">
+            <span class="metric-name">VRAM Usage</span>
+            <span class="metric-value red" id="vramVal">94%</span>
+          </div>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill red" id="vramBar" style="width:94%"></div>
+          </div>
+          <div class="metric-sub" style="color:var(--red)">\u26a0 3.76 / 4.00 GB \u2014 Critical</div>
+        </div>
+
+        <div class="metric-item">
+          <div class="metric-header">
+            <span class="metric-name">CPU \u00b7 i7-12700K</span>
+            <span class="metric-value orange" id="cpuVal">61%</span>
+          </div>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill orange" id="cpuBar" style="width:61%"></div>
+          </div>
+          <div class="metric-sub">12C/20T \u00b7 4.8GHz boost \u00b7 58\u00b0C</div>
+        </div>
+
+        <div class="metric-item">
+          <div class="metric-header">
+            <span class="metric-name">System RAM</span>
+            <span class="metric-value green" id="ramVal">42%</span>
+          </div>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill green" id="ramBar" style="width:42%"></div>
+          </div>
+          <div class="metric-sub">6.7 / 16 GB \u00b7 DDR5-4800</div>
+        </div>
+
+        <div class="metric-divider"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+            <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Draw Calls</div>
+            <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--orange)" id="drawCalls">2,847</div>
+            <div style="font-size:9px;color:var(--red);margin-top:2px">\u25b2 +1,241 spike</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+            <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Triangles</div>
+            <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--cyan)">4.2M</div>
+            <div style="font-size:9px;color:var(--green);margin-top:2px">\u25bc Within budget</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI Insights -->
+    <div class="panel insights-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot cyan"></div>
+          Config-Engine Intelligence
+        </div>
+        <div class="panel-meta">3 active insights \u00b7 model v4.1</div>
+      </div>
+      <div class="insights-body">
+
+        <div class="insight-card warn">
+          <div class="insight-badge warn">\u26a1 Optimization Alert</div>
+          <div class="insight-title">Draw-call spike in Sector 7</div>
+          <div class="insight-body">
+            AI detected <code>2,847</code> draw calls at coords <code>x:142, y:0</code> \u2014 a <strong style="color:var(--orange)">77% increase</strong> vs baseline. Static mesh batching is fragmented. Suggest merging <code>StaticMesh_Props_*</code> group into a single GPU instanced batch.
+          </div>
+          <div class="insight-footer">
+            <span class="insight-conf">Confidence: <span>94%</span></span>
+            <span class="insight-action">Auto-Fix \u2192</span>
+          </div>
+        </div>
+
+        <div class="insight-card critical">
+          <div class="insight-badge critical">\ud83d\udd34 Memory Warning</div>
+          <div class="insight-title">VRAM limit reached on 4GB config</div>
+          <div class="insight-body">
+            On devices with <code>4GB VRAM</code>, texture streaming is saturating memory bus (<code>3.76 / 4.00 GB</code>). Auto-downscale textures to <code>512\u00d7512</code> mip floor recommended. Affects 38 of 248 test configs.
+          </div>
+          <div class="insight-footer">
+            <span class="insight-conf">Confidence: <span>99%</span></span>
+            <span class="insight-action">Apply Patch \u2192</span>
+          </div>
+        </div>
+
+        <div class="insight-card info">
+          <div class="insight-badge info">\u25c8 Pathfinding Insight</div>
+          <div class="insight-title">NavMesh collision anomaly near Plaza fountain</div>
+          <div class="insight-body">
+            Bot traversal detected a <code>NavMesh</code> edge case at <code>y:0</code> elevation. Object <code>Fountain_Base_02</code> has misaligned collision volume extending <code>0.3 units</code> below terrain. Likely source of reported soft-lock.
+          </div>
+          <div class="insight-footer">
+            <span class="insight-conf">Confidence: <span>87%</span></span>
+            <span class="insight-action">View Bug \u2192</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bot Logs -->
+    <div class="panel logs-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot green"></div>
+          Bot Telemetry Log
+        </div>
+        <div class="panel-meta" id="logMeta">STREAMING</div>
+      </div>
+      <div class="log-body" id="logBody">
+        <!-- logs injected by JS -->
+      </div>
+    </div>
+
+    <!-- Device Farm -->
+    <div class="panel farm-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot orange"></div>
+          Active Device Farm
+        </div>
+        <div class="panel-meta">5 of 248 shown</div>
+      </div>
+      <div class="farm-body" id="farmBody">
+
+        <div class="device-card active">
+          <div class="device-header">
+            <div class="device-name">RTX 3060 Ti</div>
+            <div class="device-status running"></div>
+          </div>
+          <div class="device-spec"><b>OS:</b> Win11 \u00b7 <b>RAM:</b> 16GB<br><b>CPU:</b> i7-12700K<br><b>VRAM:</b> 8GB GDDR6</div>
+          <div class="device-progress"><div class="device-progress-fill" style="width:62%;background:var(--green);box-shadow:0 0 4px var(--green)"></div></div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted)">62% \u00b7 Est. 3m 20s</div>
+        </div>
+
+        <div class="device-card active">
+          <div class="device-header">
+            <div class="device-name">GTX 1060 6G</div>
+            <div class="device-status error"></div>
+          </div>
+          <div class="device-spec"><b>OS:</b> Win10 \u00b7 <b>RAM:</b> 8GB<br><b>CPU:</b> i5-8400<br><b>VRAM:</b> 6GB GDDR5</div>
+          <div class="device-progress"><div class="device-progress-fill" style="width:38%;background:var(--red);box-shadow:0 0 4px var(--red)"></div></div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--red)">CRASH at 38%</div>
+        </div>
+
+        <div class="device-card">
+          <div class="device-header">
+            <div class="device-name">RX 6600 XT</div>
+            <div class="device-status running"></div>
+          </div>
+          <div class="device-spec"><b>OS:</b> Win11 \u00b7 <b>RAM:</b> 16GB<br><b>CPU:</b> Ryzen 7 5700X<br><b>VRAM:</b> 8GB GDDR6</div>
+          <div class="device-progress"><div class="device-progress-fill" style="width:81%"></div></div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted)">81% \u00b7 Est. 1m 05s</div>
+        </div>
+
+        <div class="device-card">
+          <div class="device-header">
+            <div class="device-name">Intel Arc A770</div>
+            <div class="device-status queued"></div>
+          </div>
+          <div class="device-spec"><b>OS:</b> Win11 \u00b7 <b>RAM:</b> 32GB<br><b>CPU:</b> i9-13900K<br><b>VRAM:</b> 16GB GDDR6</div>
+          <div class="device-progress"><div class="device-progress-fill" style="width:15%"></div></div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--yellow)">Queued \u00b7 Position 3</div>
+        </div>
+
+        <div class="device-card">
+          <div class="device-header">
+            <div class="device-name">GTX 1650 4GB</div>
+            <div class="device-status running"></div>
+          </div>
+          <div class="device-spec"><b>OS:</b> Win10 \u00b7 <b>RAM:</b> 8GB<br><b>CPU:</b> i3-10100<br><b>VRAM:</b> 4GB GDDR6</div>
+          <div class="device-progress"><div class="device-progress-fill" style="width:55%;background:var(--orange);box-shadow:0 0 4px var(--orange)"></div></div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--orange)">VRAM Warning \u00b7 55%</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// \u2500\u2500\u2500 LOG DATA \u2500\u2500\u2500
+const allLogs = [
+  { time: '04:01', bot: 'Bot_01', msg: 'Spawned at StartZone \u00b7 Config: RTX 3060 Ti / Win11', type: '' },
+  { time: '04:02', bot: 'Bot_03', msg: 'Spawned at StartZone \u00b7 Config: GTX 1060 / Win10', type: '' },
+  { time: '04:04', bot: 'Bot_01', msg: 'Navigating to Central Plaza via Waypoint Alpha', type: '' },
+  { time: '04:06', bot: 'Bot_07', msg: 'Executing stress test: rapid camera rotation 360\u00b0', type: '' },
+  { time: '04:09', bot: 'Bot_12', msg: 'GPU telemetry: VRAM at 3.76GB / 4.00GB \u2014 threshold breached', type: 'event' },
+  { time: '04:11', bot: 'Bot_03', msg: 'Navigating to Fountain Area via SubPath-B', type: '' },
+  { time: '04:14', bot: 'Bot_01', msg: 'FPS dropped to 14 near Sector 7 archway', type: 'event' },
+  { time: '04:16', bot: 'Bot_03', msg: 'Draw call count: 2,847 \u00b7 baseline exceeded by 77%', type: 'event' },
+  { time: '04:18', bot: 'Bot_22', msg: 'NavMesh query at Fountain_Base_02 returned null path', type: 'event' },
+  { time: '04:19', bot: 'Bot_22', msg: 'Collision detected at y:0.0 \u00b7 potential NavMesh edge case', type: 'event' },
+  { time: '04:20', bot: 'Engine', msg: 'AI insight generated: NavMesh anomaly flagged for review', type: 'success' },
+  { time: '04:22', bot: 'Bot_01', msg: 'Navigating to Central Plaza \u00b7 ETA 8 seconds', type: '' },
+  { time: '04:23', bot: 'Bot_03', msg: 'EXCEPTION: Access violation at 0x7FF8C4A12000', type: 'error' },
+  { time: '04:23', bot: 'Engine', msg: 'CRASH RECORDED \u00b7 Config: GTX 1060 6G \u00b7 x:142, y:0', type: 'error' },
+  { time: '04:24', bot: 'Engine', msg: 'Auto-restarting Bot_03 on backup instance...', type: '' },
+  { time: '04:25', bot: 'Bot_01', msg: 'EVENT: Collision bug confirmed at x:142, y:0', type: 'event' },
+  { time: '04:26', bot: 'Engine', msg: 'AI insight generated: Static mesh batching optimization', type: 'success' },
+  { time: '04:27', bot: 'Bot_07', msg: 'Stress test complete \u00b7 Frame budget exceeded by 4.6ms avg', type: 'event' },
+  { time: '04:28', bot: 'Bot_15', msg: 'Texture streaming: mip-bias at floor \u2192 applying fallback', type: '' },
+  { time: '04:29', bot: 'Engine', msg: 'AI insight generated: VRAM limit on 4GB configs', type: 'success' },
+  { time: '04:31', bot: 'Bot_01', msg: 'Reached Central Plaza \u00b7 beginning exploration routine', type: '' },
+  { time: '04:33', bot: 'Bot_18', msg: 'Shader compilation stutter: 340ms freeze on first load', type: 'event' },
+  { time: '04:35', bot: 'Bot_09', msg: 'Audio subsystem: null pointer at SoundManager::play()', type: 'error' },
+  { time: '04:37', bot: 'Bot_21', msg: 'FPS stable at 60 \u00b7 Config: RX 6600 XT \u2014 passing', type: 'success' },
+  { time: '04:39', bot: 'Bot_01', msg: 'Initiating interaction with NPC_Guard_04...', type: '' },
+  { time: '04:40', bot: 'Bot_04', msg: 'Loot pickup animation stuck at frame 12 of 30', type: 'event' },
+  { time: '04:42', bot: 'Engine', msg: 'Run #847 progress: 62% complete \u00b7 152/248 configs', type: 'success' },
+  { time: '04:44', bot: 'Bot_01', msg: 'Sector clear \u00b7 moving to Sector 8', type: '' },
+  { time: '04:47', bot: 'Bot_11', msg: 'Memory leak detected: +12MB over 3 min in particle pool', type: 'event' },
+];
+
+let logIndex = 0;
+const logBody = document.getElementById('logBody');
+
+function addLog(entry) {
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-time">[${entry.time}]</span><span class="log-bot">${entry.bot}:</span><span class="log-msg ${entry.type}">${entry.msg}</span>`;
+  logBody.appendChild(el);
+  logBody.scrollTop = logBody.scrollHeight;
+}
+
+// Initial log population
+function initLogs() {
+  logBody.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    addLog(allLogs[i]);
+  }
+  logIndex = 12;
+}
+
+initLogs();
+
+// Streaming logs
+setInterval(() => {
+  if (logIndex < allLogs.length) {
+    addLog(allLogs[logIndex]);
+    logIndex++;
+    if (logIndex >= allLogs.length) logIndex = 0;
+  }
+}, 2800);
+
+// \u2500\u2500\u2500 ELAPSED TIMER \u2500\u2500\u2500
+let elapsedSeconds = 287;
+setInterval(() => {
+  elapsedSeconds++;
+  const m = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+  const s = (elapsedSeconds % 60).toString().padStart(2, '0');
+  document.getElementById('elapsed').textContent = `${m}:${s}`;
+}, 1000);
+
+// \u2500\u2500\u2500 LIVE METRICS FLICKER \u2500\u2500\u2500
+const metricsData = [
+  { gpu: 78, vram: 94, cpu: 61, ram: 42, fps: 47 },
+  { gpu: 82, vram: 95, cpu: 65, ram: 43, fps: 44 },
+  { gpu: 74, vram: 93, cpu: 58, ram: 41, fps: 51 },
+  { gpu: 80, vram: 96, cpu: 62, ram: 44, fps: 46 },
+  { gpu: 77, vram: 94, cpu: 60, ram: 42, fps: 49 },
+];
+let mIdx = 0;
+
+function updateMetrics() {
+  mIdx = (mIdx + 1) % metricsData.length;
+  const d = metricsData[mIdx];
+  document.getElementById('gpuVal').textContent = d.gpu + '%';
+  document.getElementById('gpuBar').style.width = d.gpu + '%';
+  document
